@@ -1,0 +1,4 @@
+-main comment.Main
+-js bin/comments/main.js
+-cp src
+-cp examples
