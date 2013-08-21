@@ -5,7 +5,7 @@ import ractive.Ractive;
 import Map;
 import thx.core.AnonymousMap;
 
-@:autoBuild(ractive.ViewTemplate.build())
+@:autoBuild(ractive.TemplateBuilder.build())
 class View<T>
 {
 	var ractive : Ractive;
@@ -51,7 +51,7 @@ class View<T>
 
 	public function off<T>(?eventName : String, ?handler : T -> Void)
 		ractive.off(eventName, handler);
-	
+
 	public function get<T>(field : String) : T
 		return ractive.get(field);
 

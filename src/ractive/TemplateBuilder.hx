@@ -10,12 +10,15 @@ import thx.markup.html.Html;
 using StringTools;
 using thx.core.Ints;
 
-class ViewTemplate
+class TemplateBuilder
 {
 	public static function build() : Array<Field>
 	{
 		var cls    = Context.getLocalClass().get(),
 			fields = haxe.macro.Context.getBuildFields();
+
+		if(cls.meta.has(":skipTemplate"))
+			return fields;
 
 		function findAndBind()
 		{
@@ -51,7 +54,7 @@ class ViewTemplate
 
 		var xml = Html.toXml(content);
 		for(filter in filters)
-			xml = filter.filter(xml, filter.argument);
+			xml = filter(xml);
 
 		return Html.getFormatter(Html5).format(xml);
 	}
@@ -61,13 +64,23 @@ class ViewTemplate
 		var filters = [];
 		var selector = extractStringParamFromMetadata(cls, ":selector");
 		if(null != selector)
-			filters.push({ filter : filterSelector, argument : selector });
+			filters.push(filterSelector.bind(_, selector));
 
 		selector = extractStringParamFromMetadata(cls, ":discard");
 		if(null != selector)
-			filters.push({ filter : filterDiscardElements, argument : selector });
+			filters.push(filterDiscardElements.bind(_, selector));
+
+		if(!hasMetadata(cls, ":keepComments"))
+			filters.push(filterComments);
 
 		return filters;
+	}
+
+	static function filterComments(xml : Xml)
+	{
+		var visitor = new XmlVisitor();
+		visitor.createQuery([xml]).select("comment").remove();
+		return xml;
 	}
 
 	static function filterSelector(xml : Xml, selector : String)
@@ -99,7 +112,7 @@ class ViewTemplate
 
 	static function extractStringParamFromMetadata(cls : ClassType, name : String)
 	{
-		var metas = cls.meta.get();
+		var metas = getMeta(cls);
 		for(meta in metas)
 		{
 			if(meta.name != name)
@@ -107,6 +120,32 @@ class ViewTemplate
 			return extractString(meta.params);
 		}
 		return null;
+	}
+
+	static function getMeta(cls : ClassType)
+	{
+		var metas = cls.meta.get();
+		while(null != cls.superClass)
+		{
+			cls = cls.superClass.t.get();
+			metas = metas.concat(cls.meta.get());
+		}
+
+		return metas;
+	}
+
+	static function hasMetadata(cls : ClassType, name : String)
+	{
+		while(null != cls)
+		{
+			if(cls.meta.has(name))
+				return true;
+			if(null == cls.superClass)
+				cls = null;
+			else
+				cls = cls.superClass.t.get();
+		}
+		return false;
 	}
 
 	static function getTemplatePathFromMetadata(cls : ClassType)
