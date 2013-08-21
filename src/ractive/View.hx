@@ -33,7 +33,7 @@ class View<T>
 					temp[temp.length-1] = temp[temp.length-1].toLowerCase() + ".html";
 					return temp.join(".");
 				})();
-		return throw 'no template for $name: create a file $path';
+		return throw 'no template for $name: create a file $path or add a @:view(path) metadata';
 	}
 
 	function get_data() : T
