@@ -5,7 +5,7 @@ import ractive.Ractive;
 import Map;
 import thx.core.AnonymousMap;
 
-@:autoBuild(ractive.TemplateBuilder.build())
+#if !display @:autoBuild(ractive.TemplateBuilder.build()) #end
 class View<T>
 {
 	var ractive : Ractive;
