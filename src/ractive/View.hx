@@ -58,8 +58,15 @@ class View<T>
 	public function set<T>(keypath : String, value : T, ?complete : Void -> Void)
 		ractive.set(keypath, value, complete);
 
-	public function setMany(values : Dynamic, ?complete : Void -> Void)
+	public function setAll(values : Dynamic, ?complete : Void -> Void)
 		ractive.set(values, complete);
+
+	public function setMany(values : Dynamic, ?prefix : String, ?complete : Void -> Void)
+	{
+		for(field in Reflect.fields(values))
+			Reflect.setField(data, field, Reflect.field(values, field));
+		update(null, complete);
+	}
 
 	public function animate(keypath : String, value : Dynamic, ?options : RactiveAnimateOptions)
 		ractive.animate(keypath, value, options);
