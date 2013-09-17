@@ -38,7 +38,6 @@ class TemplateBuilder
 		var rel = getTemplatePath(cls);
 		if(cache.exists(rel))
 		{
-trace("from cache");
 			return cache.get(rel);
 		}
 		for(cp in Context.getClassPath())
@@ -49,7 +48,6 @@ trace("from cache");
 				Context.registerModuleDependency(cls.module, path);
 				var content = sys.io.File.getContent(path);
 				cache.set(rel, content);
-trace("NOT from cache");
 				return content;
 			}
 		}
@@ -72,6 +70,7 @@ trace("NOT from cache");
 			cacheXml.set(content, xml);
 		}
 
+		xml = xml.clone();
 		for(filter in filters)
 			xml = filter(xml);
 
@@ -98,7 +97,7 @@ trace("NOT from cache");
 	static function filterComments(xml : Xml)
 	{
 		var visitor = new XmlVisitor();
-		visitor.createQuery([xml.clone()]).select("comment").remove();
+		visitor.createQuery([xml]).select("comment").remove();
 		return xml;
 	}
 
@@ -117,7 +116,7 @@ trace("NOT from cache");
 	static function filterDiscardElements(xml : Xml, selector : String)
 	{
 		var visitor = new XmlVisitor();
-		visitor.createQuery([xml.clone()]).select(selector).remove();
+		visitor.createQuery([xml]).select(selector).remove();
 		return xml;
 	}
 
