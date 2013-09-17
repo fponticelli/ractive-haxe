@@ -6,6 +6,7 @@ import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Type;
 import thx.markup.html.Html;
+using thx.markup.xml.Xmls;
 
 using StringTools;
 using thx.core.Ints;
@@ -15,27 +16,12 @@ class TemplateBuilder
 	public static function build() : Array<Field>
 	{
 		var cls    = Context.getLocalClass().get(),
-			fields = haxe.macro.Context.getBuildFields();
+				fields = haxe.macro.Context.getBuildFields();
 
 		if(cls.meta.has(":skipTemplate"))
 			return fields;
 
-		function findAndBind()
-		{
-			var rel = getTemplatePath(cls);
-			for(cp in Context.getClassPath())
-			{
-				var path = '$cp$rel';
-				if(sys.FileSystem.exists(path))
-				{
-					Context.registerModuleDependency(cls.module, path);
-					return filterContent(sys.io.File.getContent(path), cls);
-				}
-
-			}
-			return null;
-		}
-		var template = findAndBind();
+		var template = filterContent(findFileAndBindModule(cls), cls);
 		if(null != template)
 		{
 			return fields.concat((macro class {
@@ -46,17 +32,50 @@ class TemplateBuilder
 		return fields;
 	}
 
+	static var cache : Map<String, String> = new Map();
+	static function findFileAndBindModule(cls : ClassType)
+	{
+		var rel = getTemplatePath(cls);
+		if(cache.exists(rel))
+		{
+trace("from cache");
+			return cache.get(rel);
+		}
+		for(cp in Context.getClassPath())
+		{
+			var path = '$cp$rel';
+			if(sys.FileSystem.exists(path))
+			{
+				Context.registerModuleDependency(cls.module, path);
+				var content = sys.io.File.getContent(path);
+				cache.set(rel, content);
+trace("NOT from cache");
+				return content;
+			}
+		}
+		return null;
+	}
+
+	static var cacheXml : Map<String, Xml> = new Map();
 	static function filterContent(content : String, cls : ClassType)
 	{
 		var filters = collectFilters(cls);
 		if(filters.length == 0)
 			return content;
 
-		var xml = Html.toXml(content);
+		var xml;
+		if(cacheXml.exists(content))
+		{
+			xml = cacheXml.get(content);
+		} else {
+			xml = Html.toXml(content);
+			cacheXml.set(content, xml);
+		}
+
 		for(filter in filters)
 			xml = filter(xml);
 
-		return Html.getFormatter(Html5).format(xml);
+		return xml.toString();// Html.getFormatter(Html5).format(xml);
 	}
 
 	static function collectFilters(cls : ClassType)
@@ -79,7 +98,7 @@ class TemplateBuilder
 	static function filterComments(xml : Xml)
 	{
 		var visitor = new XmlVisitor();
-		visitor.createQuery([xml]).select("comment").remove();
+		visitor.createQuery([xml.clone()]).select("comment").remove();
 		return xml;
 	}
 
@@ -98,7 +117,7 @@ class TemplateBuilder
 	static function filterDiscardElements(xml : Xml, selector : String)
 	{
 		var visitor = new XmlVisitor();
-		visitor.createQuery([xml]).select(selector).remove();
+		visitor.createQuery([xml.clone()]).select(selector).remove();
 		return xml;
 	}
 
